@@ -17,7 +17,7 @@ from std_msgs.msg import UInt8
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Polygon, Point32
 from yolov3_pytorch_ros.msg import BoundingBox, BoundingBoxes
-from cv_bridge import CvBridge, CvBridgeError
+#from cv_bridge import CvBridge, CvBridgeError
 
 package = RosPack()
 package_path = package.get_path('yolov3_pytorch_ros')
@@ -70,7 +70,8 @@ class DetectorManager():
         self.model = Darknet(self.config_path, img_size=self.network_img_size)
         # Load net
         self.model.load_weights(self.weights_path)
-        if torch.cuda.is_available():
+        self.use_cuda = True
+        if torch.cuda.is_available() and self.use_cuda:
             rospy.loginfo("CUDA available, use GPU")
             self.model.cuda()
         else:
@@ -82,7 +83,7 @@ class DetectorManager():
         rospy.loginfo("Deep neural network loaded")
 
         # Load CvBridge
-        self.bridge = CvBridge()
+        #self.bridge = CvBridge()
 
         # Load classes
         self.classes = load_classes(self.classes_path) # Extracts class labels from file
@@ -98,10 +99,8 @@ class DetectorManager():
 
     def imageCb(self, data):
         # Convert the image to OpenCV
-        try:
-            self.cv_image = self.bridge.imgmsg_to_cv2(data, "rgb8")
-        except CvBridgeError as e:
-            print(e)
+        #self.cv_image = self.bridge.imgmsg_to_cv2(data, "rgb8")
+        self.cv_image = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
 
         # Initialize detection results
         detection_results = BoundingBoxes()
@@ -112,7 +111,7 @@ class DetectorManager():
         input_img = self.imagePreProcessing(self.cv_image)
 
         # set image type
-        if(torch.cuda.is_available()):
+        if(torch.cuda.is_available() and self.use_cuda):
           input_img = Variable(input_img.type(torch.cuda.FloatTensor))
         else:
           input_img = Variable(input_img.type(torch.FloatTensor))
@@ -154,8 +153,6 @@ class DetectorManager():
             # Visualize detection results
             if (self.publish_image):
                 self.visualizeAndPublish(detection_results, self.cv_image)
-        else:
-            rospy.loginfo("No detections available, next image")
         return True
     
 
@@ -224,7 +221,13 @@ class DetectorManager():
             cv2.putText(imgOut, text, (int(x_p1), int(y_p1+20)), font, fontScale, (255,255,255), thickness ,cv2.LINE_AA)
 
         # Publish visualization image
-        image_msg = self.bridge.cv2_to_imgmsg(imgOut, "rgb8")
+        #image_msg = self.bridge.cv2_to_imgmsg(imgOut, "rgb8")
+        image_msg = Image()
+        image_msg.encoding = "bgr8"
+        image_msg.height = imgOut.shape[0]
+        image_msg.width = imgOut.shape[1]
+        image_msg.step = image_msg.width*3
+        image_msg.data = imgOut.tobytes()
         self.pub_viz_.publish(image_msg)
 
 
