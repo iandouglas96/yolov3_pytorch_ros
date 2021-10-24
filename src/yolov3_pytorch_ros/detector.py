@@ -16,7 +16,6 @@ from rospkg import RosPack
 from std_msgs.msg import UInt8
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Polygon, Point32
-from yolov3_pytorch_ros.msg import BoundingBox, BoundingBoxes
 #from cv_bridge import CvBridge, CvBridgeError
 
 package = RosPack()
@@ -30,7 +29,7 @@ from torch.autograd import Variable
 
 from models.models import Darknet
 from utils.utils import *
-from yolov3_pytorch_ros.msg import BoundingBoxes, BoundingBox
+from vision_msgs.msg import ObjectHypothesisWithPose, Detection2D, Detection2DArray
 
 # Detector manager class for YOLO
 class DetectorManager():
@@ -93,7 +92,7 @@ class DetectorManager():
         self.image_sub = rospy.Subscriber(self.image_topic, Image, self.imageCb, queue_size = 1, buff_size = 2**24)
 
         # Define publishers
-        self.pub_ = rospy.Publisher(self.detected_objects_topic, BoundingBoxes, queue_size=10)
+        self.pub_ = rospy.Publisher(self.detected_objects_topic, Detection2DArray, queue_size=10)
         self.pub_viz_ = rospy.Publisher(self.published_image_topic, Image, queue_size=10)
         rospy.loginfo("Launched node for object detection")
 
@@ -103,9 +102,8 @@ class DetectorManager():
         self.cv_image = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
 
         # Initialize detection results
-        detection_results = BoundingBoxes()
+        detection_results = Detection2DArray()
         detection_results.header = data.header
-        detection_results.image_header = data.header
 
         # Configure input
         input_img = self.imagePreProcessing(self.cv_image)
@@ -136,16 +134,18 @@ class DetectorManager():
                 ymax_unpad = ((ymax-ymin)/unpad_h)*self.h + ymin_unpad
 
                 # Populate darknet message
-                detection_msg = BoundingBox()
-                detection_msg.xmin = xmin_unpad
-                detection_msg.xmax = xmax_unpad
-                detection_msg.ymin = ymin_unpad
-                detection_msg.ymax = ymax_unpad
-                detection_msg.probability = conf
-                detection_msg.Class = self.classes[int(det_class)]
+                detection_msg = Detection2D()
+                detection_msg.bbox.size_x = xmax_unpad - xmin_unpad
+                detection_msg.bbox.size_y = ymax_unpad - ymin_unpad
+                detection_msg.bbox.center.x = (xmax_unpad + xmin_unpad)/2
+                detection_msg.bbox.center.y = (ymax_unpad + ymin_unpad)/2
+                result_msg = ObjectHypothesisWithPose()
+                result_msg.score = conf
+                result_msg.id = int(det_class)
+                detection_msg.results.append(result_msg)
 
                 # Append in overall detection message
-                detection_results.bounding_boxes.append(detection_msg)
+                detection_results.detections.append(detection_msg)
 
             # Publish detection results
             self.pub_.publish(detection_results)
@@ -195,13 +195,18 @@ class DetectorManager():
         font = cv2.FONT_HERSHEY_SIMPLEX
         fontScale = 0.6
         thickness = int(2)
-        for index in range(len(output.bounding_boxes)):
-            label = output.bounding_boxes[index].Class
-            x_p1 = output.bounding_boxes[index].xmin
-            y_p1 = output.bounding_boxes[index].ymin
-            x_p3 = output.bounding_boxes[index].xmax
-            y_p3 = output.bounding_boxes[index].ymax
-            confidence = output.bounding_boxes[index].probability
+        for index in range(len(output.detections)):
+            label = self.classes[output.detections[index].results[0].id]
+            size_x = output.detections[index].bbox.size_x
+            size_y = output.detections[index].bbox.size_y
+            center_x = output.detections[index].bbox.center.x
+            center_y = output.detections[index].bbox.center.y
+
+            x_p1 = center_x - size_x/2
+            y_p1 = center_y - size_y/2
+            x_p3 = center_x + size_x/2
+            y_p3 = center_y + size_y/2
+            confidence = output.detections[index].results[0].score
 
             # Find class color
             if label in self.classes_colors.keys():
