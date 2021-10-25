@@ -6,7 +6,6 @@ from __future__ import division
 import numpy as np
 import scipy.io as sio
 import os, sys, cv2, time
-from skimage.transform import resize
 from torch.cuda import is_available
 
 # ROS imports
@@ -60,6 +59,7 @@ class DetectorManager():
         self.gpu_id = rospy.get_param('~gpu_id', 0)
         self.network_img_size = rospy.get_param('~img_size', 416)
         self.publish_image = rospy.get_param('~publish_image')
+        self.use_cuda = rospy.get_param('~use_cuda', True)
         
         # Initialize width and height
         self.h = 0
@@ -69,11 +69,12 @@ class DetectorManager():
         self.model = Darknet(self.config_path, img_size=self.network_img_size)
         # Load net
         self.model.load_weights(self.weights_path)
-        self.use_cuda = True
         if torch.cuda.is_available() and self.use_cuda:
             rospy.loginfo("CUDA available, use GPU")
+            self.device = torch.device('cuda')
             self.model.cuda()
         else:
+            self.device = torch.device('cpu')
             rospy.loginfo("CUDA not available, use CPU")
             # if CUDA not available, use CPU
             # self.checkpoint = torch.load(self.weights_path, map_location=torch.device('cpu'))
@@ -157,35 +158,25 @@ class DetectorManager():
     
 
     def imagePreProcessing(self, img):
+        input_img = torch.from_numpy(np.ascontiguousarray(np.transpose(img.copy(), (2,0,1)))).float().to(self.device)
         # Extract image and shape
-        img = np.ascontiguousarray(img)
-        img = img.astype(float)
         height, width, channels = img.shape
         
-        if (height != self.h) or (width != self.w):
-            self.h = height
-            self.w = width
-            
-            # Determine image to be used
-            self.padded_image = np.zeros((max(self.h,self.w), max(self.h,self.w), channels)).astype(float)
+        self.h = height
+        self.w = width
+        
+        # Determine image to be used
+        padded_image = torch.zeros((channels, max(self.h,self.w), max(self.h,self.w)), dtype=torch.float, device=self.device)
             
         # Add padding
         if (self.w > self.h):
-            self.padded_image[(self.w-self.h)//2 : self.h + (self.w-self.h)//2, :, :] = img
+            padded_image[:, (self.w-self.h)//2 : self.h + (self.w-self.h)//2, :] = input_img
         else:
-            self.padded_image[:, (self.h-self.w)//2 : self.w + (self.h-self.w)//2, :] = img
+            padded_image[:, :, (self.h-self.w)//2 : self.w + (self.h-self.w)//2] = input_img
         
         # Resize and normalize
-        input_img = resize(self.padded_image, (self.network_img_size, self.network_img_size, 3))/255.
-
-        # Channels-first
-        input_img = np.transpose(input_img, (2, 0, 1))
-
-        # As pytorch tensor
-        input_img = torch.from_numpy(input_img).float()
-        input_img = input_img[None]
-
-        return input_img
+        resized_img = torch.nn.functional.interpolate(padded_image[None], size=(self.network_img_size, self.network_img_size))/255.
+        return resized_img
 
 
     def visualizeAndPublish(self, output, imgIn):
