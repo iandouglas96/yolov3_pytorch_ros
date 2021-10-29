@@ -71,7 +71,7 @@ class DetectorManager():
         if self.weights_path.endswith('.pth'):
             self.model.load_state_dict(torch.load(self.weights_path))
         else:
-            self.model.load_weights(self.weights_path)
+            self.model.load_darknet_weights(self.weights_path)
 
         if torch.cuda.is_available() and self.use_cuda:
             rospy.loginfo("CUDA available, use GPU")

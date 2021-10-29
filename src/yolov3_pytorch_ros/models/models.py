@@ -1,5 +1,6 @@
 from __future__ import division
 from itertools import chain
+import os
 
 import torch
 import torch.nn as nn
