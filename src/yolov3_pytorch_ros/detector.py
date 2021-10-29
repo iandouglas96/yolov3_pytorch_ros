@@ -66,9 +66,13 @@ class DetectorManager():
         self.w = 0
 
         rospy.loginfo("config path: " + self.config_path)
-        self.model = Darknet(self.config_path, img_size=self.network_img_size)
+        self.model = Darknet(self.config_path)
         # Load net
-        self.model.load_weights(self.weights_path)
+        if self.weights_path.endswith('.pth'):
+            self.model.load_state_dict(torch.load(self.weights_path))
+        else:
+            self.model.load_weights(self.weights_path)
+
         if torch.cuda.is_available() and self.use_cuda:
             rospy.loginfo("CUDA available, use GPU")
             self.device = torch.device('cuda')
