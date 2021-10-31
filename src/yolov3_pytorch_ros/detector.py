@@ -67,22 +67,23 @@ class DetectorManager():
 
         rospy.loginfo("config path: " + self.config_path)
         self.model = Darknet(self.config_path)
-        # Load net
-        if self.weights_path.endswith('.pth'):
-            self.model.load_state_dict(torch.load(self.weights_path))
-        else:
-            self.model.load_darknet_weights(self.weights_path)
 
         if torch.cuda.is_available() and self.use_cuda:
             rospy.loginfo("CUDA available, use GPU")
             self.device = torch.device('cuda')
-            self.model.cuda()
         else:
-            self.device = torch.device('cpu')
             rospy.loginfo("CUDA not available, use CPU")
-            # if CUDA not available, use CPU
-            # self.checkpoint = torch.load(self.weights_path, map_location=torch.device('cpu'))
-            # self.model.load_state_dict(self.checkpoint)
+            self.device = torch.device('cpu')
+
+        # Load net
+        if self.weights_path.endswith('.pth'):
+            self.model.load_state_dict(torch.load(self.weights_path, map_location=self.device))
+        else:
+            self.model.load_darknet_weights(self.weights_path)
+
+        if torch.cuda.is_available() and self.use_cuda:
+            self.model.cuda()
+
         self.model.eval() # Set in evaluation mode
         rospy.loginfo("Deep neural network loaded")
 
