@@ -128,7 +128,7 @@ class DetectorManager():
         if detections[0] is not None:
             for detection in detections[0]:
                 # Get xmin, ymin, xmax, ymax, confidence and class
-                xmin, ymin, xmax, ymax, _, conf, det_class = detection
+                xmin, ymin, xmax, ymax, conf, _, det_class = detection
                 pad_x = max(self.h - self.w, 0) * (self.network_img_size/max(self.h, self.w))
                 pad_y = max(self.w - self.h, 0) * (self.network_img_size/max(self.h, self.w))
                 unpad_h = self.network_img_size-pad_y
