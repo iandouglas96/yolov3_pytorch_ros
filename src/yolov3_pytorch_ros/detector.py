@@ -91,7 +91,7 @@ class DetectorManager():
         #self.bridge = CvBridge()
 
         # Load classes
-        self.classes = load_classes(self.classes_path) # Extracts class labels from file
+        self.classes, self.class_threshes = load_classes(self.classes_path) # Extracts class labels from file
         self.classes_colors = {}
         
         # Define subscribers
@@ -130,6 +130,8 @@ class DetectorManager():
             for detection in detections[0]:
                 # Get xmin, ymin, xmax, ymax, confidence and class
                 xmin, ymin, xmax, ymax, conf, _, det_class = detection
+                if conf < self.class_threshes[int(det_class)]:
+                    continue
                 pad_x = max(self.h - self.w, 0) * (self.network_img_size/max(self.h, self.w))
                 pad_y = max(self.w - self.h, 0) * (self.network_img_size/max(self.h, self.w))
                 unpad_h = self.network_img_size-pad_y
@@ -154,10 +156,11 @@ class DetectorManager():
                 detection_results.detections.append(detection_msg)
 
             # Publish detection results
-            self.pub_.publish(detection_results)
+            if len(detection_results.detections) > 0:
+                self.pub_.publish(detection_results)
 
             # Visualize detection results
-            if (self.publish_image):
+            if self.publish_image and len(detection_results.detections) > 0:
                 self.visualizeAndPublish(detection_results, self.cv_image)
         return True
     
