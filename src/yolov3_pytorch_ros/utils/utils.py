@@ -17,7 +17,16 @@ def load_classes(path):
     """
     fp = open(path, "r")
     names = fp.read().split("\n")[:-1]
-    return names
+    class_names = []
+    class_thresh = []
+    for name in names:
+        class_data = name.split(',')
+        class_names.append(class_data[0])
+        if len(class_data) > 1:
+            class_thresh.append(float(class_data[1]))
+        else:
+            class_thresh.append(-1)
+    return class_names, class_thresh
 
 
 def weights_init_normal(m):
