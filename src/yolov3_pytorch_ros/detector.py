@@ -223,7 +223,7 @@ class DetectorManager():
         # Publish visualization image
         #image_msg = self.bridge.cv2_to_imgmsg(imgOut, "rgb8")
         image_msg = Image()
-        image_msg.encoding = "bgr8"
+        image_msg.encoding = "rgb8"
         image_msg.height = imgOut.shape[0]
         image_msg.width = imgOut.shape[1]
         image_msg.step = image_msg.width*3
