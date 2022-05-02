@@ -4,7 +4,6 @@ from __future__ import division
 
 # Python imports
 import numpy as np
-import scipy.io as sio
 import os, sys, cv2, time
 from torch.cuda import is_available
 

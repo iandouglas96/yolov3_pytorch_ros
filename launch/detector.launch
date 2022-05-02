@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
     <!-- Camera topic and weights, config and classes files -->
-    <arg name="image_topic"	                default="/camera/color/image_raw"/>
+    <arg name="image_topic"	                default="/camera/color/image_raw_throttle"/>
     <arg name="weights_name"	              default="yolov3.weights"/>
     <arg name="config_name"	                default="yolov3.cfg"/>
     <arg name="classes_name"	              default="coco.names"/>
 
     <!-- Published topics -->
     <arg name="publish_image"	              default="true"/>
-    <arg name="detected_objects_topic"      default="detected_objects_in_image"/>
-    <arg name="detections_image_topic"      default="detections_image_topic"/>
+    <arg name="detected_objects_topic"      default="~detected_objects_in_image"/>
+    <arg name="detections_image_topic"      default="~detections_image_topic"/>
 
     <!-- Detection confidence -->
     <arg name="confidence"                  default="0.5"/>
     <arg name="use_cuda"                    default="True"/>
 
     <!-- Node -->
-    <node name="detector_manager" pkg="yolov3_pytorch_ros" type="detector.py" output="screen">
+    <node name="detector" pkg="yolov3_pytorch_ros" type="detector.py" output="screen">
         <param name="image_topic"               value="$(arg image_topic)"/>
         <param name="weights_name"              value="$(arg weights_name)"/>
         <param name="config_name"               value="$(arg config_name)"/>

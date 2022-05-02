@@ -3,12 +3,12 @@
 
 ## ! DO NOT MANUALLY INVOKE THIS setup.py, USE CATKIN INSTEAD
 
-from setuptools import setup, find_packages
+from setuptools import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
 # fetch values from package.xml
 setup_args = generate_distutils_setup(
-    packages=find_packages(include=['yolov3_pytorch_ros', 'yolov3_pytorch_ros.*']),
+    packages=['yolov3_pytorch_ros', 'utils', 'models'],
     package_dir={'': 'src'})
 
 setup(**setup_args)
