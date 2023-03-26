@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+    <arg name="output" default="screen"/>
+
     <!-- Camera topic and weights, config and classes files -->
     <arg name="image_topic"	                default="/camera/color/image_raw_throttle"/>
     <arg name="weights_name"	              default="yolov3.weights"/>
@@ -16,7 +18,7 @@
     <arg name="use_cuda"                    default="False"/>
 
     <!-- Node -->
-    <node name="detector" pkg="yolov3_pytorch_ros" type="detector.py" output="screen">
+    <node name="detector" pkg="yolov3_pytorch_ros" type="detector.py" output="$(arg output)">
         <param name="image_topic"               value="$(arg image_topic)"/>
         <param name="weights_name"              value="$(arg weights_name)"/>
         <param name="config_name"               value="$(arg config_name)"/>
