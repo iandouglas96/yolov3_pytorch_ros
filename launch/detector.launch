@@ -16,6 +16,7 @@
     <!-- Detection confidence -->
     <arg name="confidence"                  default="0.5"/>
     <arg name="use_cuda"                    default="False"/>
+    <arg name="downsample_coeff"            default="5"/>
 
     <!-- Node -->
     <node name="detector" pkg="yolov3_pytorch_ros" type="detector.py" output="$(arg output)">
@@ -28,5 +29,6 @@
         <param name="detections_image_topic"    value="$(arg detections_image_topic)"/>
         <param name="confidence"                value="$(arg confidence)"/>
         <param name="use_cuda"                  value="$(arg use_cuda)"/>
+        <param name="downsample_coeff"          value="$(arg downsample_coeff)"/>
     </node>
 </launch>

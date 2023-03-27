@@ -35,7 +35,7 @@ class DetectorManager():
         # Load weights parameter
         weights_name = rospy.get_param('~weights_name', 'yolov3.weights')
         self.weights_path = os.path.join(package_path, 'models', weights_name)
-        rospy.loginfo("Found weights, loading %s", self.weights_path)
+        rospy.loginfo("[YOLO] Found weights, loading %s", self.weights_path)
 
         # Raise error if it cannot find the model
         if not os.path.isfile(self.weights_path):
@@ -59,19 +59,21 @@ class DetectorManager():
         self.network_img_size = rospy.get_param('~img_size', 416)
         self.publish_image = rospy.get_param('~publish_image')
         self.use_cuda = rospy.get_param('~use_cuda', True)
+        self.downsample_coeff = rospy.get_param('~downsample_coeff', 5)
+        self.img_counter = 0
         
         # Initialize width and height
         self.h = 0
         self.w = 0
 
-        rospy.loginfo("config path: " + self.config_path)
+        rospy.loginfo("[YOLO] config path: " + self.config_path)
         self.model = Darknet(self.config_path)
 
         if torch.cuda.is_available() and self.use_cuda:
-            rospy.loginfo("CUDA available, use GPU")
+            rospy.loginfo("[YOLO] CUDA available, use GPU")
             self.device = torch.device('cuda')
         else:
-            rospy.loginfo("CUDA not available, use CPU")
+            rospy.loginfo("[YOLO] CUDA not available, use CPU")
             self.device = torch.device('cpu')
 
         # Load net
@@ -84,7 +86,7 @@ class DetectorManager():
             self.model.cuda()
 
         self.model.eval() # Set in evaluation mode
-        rospy.loginfo("Deep neural network loaded")
+        rospy.loginfo("[YOLO] Deep neural network loaded")
 
         # Load CvBridge
         #self.bridge = CvBridge()
@@ -99,9 +101,14 @@ class DetectorManager():
         # Define publishers
         self.pub_ = rospy.Publisher(self.detected_objects_topic, Detection2DArray, queue_size=10)
         self.pub_viz_ = rospy.Publisher(self.published_image_topic, Image, queue_size=10)
-        rospy.loginfo("Launched node for object detection")
+        rospy.loginfo("[YOLO] Launched node for object detection")
 
     def imageCb(self, data):
+        self.img_counter += 1
+        if self.img_counter < self.downsample_coeff:
+            return
+        self.img_counter = 0
+
         # Convert the image to OpenCV
         #self.cv_image = self.bridge.imgmsg_to_cv2(data, "rgb8")
         self.cv_image = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
